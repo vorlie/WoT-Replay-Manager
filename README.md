@@ -14,12 +14,42 @@ The WoT Replay Manager is a desktop application built with Python and PyQt6 that
 ## Prerequisites
 To run this application, you will need:
 
-- **Python 3.x**
-- **PyQt6**: `pip install PyQt6`
-- **wotreplay**: `pip install wotreplay`
-- **bottles-cli**: Required for launching replays. This tool is typically used on Linux systems for managing Windows applications.
-    - **Note**: This application is not designed to work with Flatpak Bottles.
-    - **Bottles**: https://usebottles.com/
+0. **Resources:**
+- https://docs.astral.sh/uv/reference/cli/
+- https://docs.astral.sh/uv/getting-started/
+- https://docs.astral.sh/uv/guides/install-python/
+- https://docs.astral.sh/uv/getting-started/installation/
+- https://docs.astral.sh/uv/guides/scripts/
+- https://usebottles.com/
+
+1. **Python 3.x**
+- Make sure Python is installed on your system. If not you can run `uv python install`
+- On Linux, you may need to use `python3` and `pip3` instead of `python` and `pip` in your commands.
+
+2. **Create and Activate a Virtual Environment**
+- It's a best practice to install project dependencies in a virtual environment to avoid conflicts with other Python projects.
+- Using `uv` is the fastest way to set this up. Open your terminal or command prompt and run the following command:
+    ```bash
+    uv venv
+    ```
+
+3. **Install Dependencies**
+
+- With your virtual environment activated, you can install all necessary libraries by running a single command: `uv pip install -r requirements.txt`
+
+4. **Bottles CLI (Optional, for replay playback)**
+
+- This tool is typically used on Linux systems for managing Windows applications.
+- This step can be skipped if you are using Windows, as replays will launch with your local game installation.
+- It is required to launch replays with your World of Tanks executable if you are on Linux. The rest of the application's features will work without it.
+
+- You can find more information about Bottles and its CLI on the official website:  https://usebottles.com/
+
+5. **How to Run the Application**
+
+- With the virtual environment created and dependencies installed, you can run the application directly from your terminal.
+
+- Using `uv run` will automatically use the correct virtual environment: `uv run main.py`
 
 ## How to Use
 1. **First-Time Setup**
