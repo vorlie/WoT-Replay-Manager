@@ -1,7 +1,7 @@
 # WoT Replay Manager
 
 The WoT Replay Manager is a desktop application built with Python and PyQt6 that helps you manage and launch your World of Tanks replays. It provides a user-friendly interface to sort, view, and launch replay files, as well as clean up old replays that are no longer compatible with the current game version.
-Features. ***Mainly made for Linux users.***
+***Mainly made for Linux users.***
 
 - **Replay Listing**: Automatically detects and lists .wotreplay files from your specified directory.
 - **Detailed Information**: Displays key replay metadata, including player name, tank, map, date, damage dealt, and game version.
