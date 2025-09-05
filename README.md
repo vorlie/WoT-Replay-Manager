@@ -19,7 +19,7 @@ To run this application, you will need:
 - **wotreplay**: `pip install wotreplay`
 - **bottles-cli**: Required for launching replays. This tool is typically used on Linux systems for managing Windows applications.
     - **Note**: This application is not designed to work with Flatpak Bottles.
-    - **Bottles**: https://github.com/bottlesapp/bottles
+    - **Bottles**: https://usebottles.com/
 
 ## How to Use
 1. **First-Time Setup**
