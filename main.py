@@ -343,28 +343,42 @@ class ReplayManager(QWidget):
         selected_replay = self.replays_data[selected_index]
         replay_path = selected_replay["path"]
 
-        command = [
-            "bottles-cli",
-            "run",
-            "-b",
-            self.bottle_name,
-            "-e",
-            self.wot_executable_path,
-            "--args",
-            replay_path,
-        ]
-
-        try:
-            subprocess.Popen(command)
-            QMessageBox.information(
-                self, "Launching", f"Launching replay: {replay_path}"
-            )
-        except FileNotFoundError:
-            QMessageBox.critical(
-                self, "Error", "bottles-cli not found. Make sure it's in your PATH."
-            )
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"An error occurred: {e}")
+        # Check the operating system and use the appropriate command
+        if sys.platform.startswith('win'):
+            # For Windows, launch the executable with the replay path as an argument
+            command = [self.wot_executable_path, replay_path]
+            try:
+                subprocess.Popen(command)
+                QMessageBox.information(
+                    self, "Launching", f"Launching replay: {replay_path}"
+                )
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"An error occurred while launching on Windows: {e}")
+        elif sys.platform.startswith('linux'):
+            # For Linux, use bottles-cli to run the executable
+            command = [
+                "bottles-cli",
+                "run",
+                "-b",
+                self.bottle_name,
+                "-e",
+                self.wot_executable_path,
+                "--args",
+                replay_path,
+            ]
+            try:
+                subprocess.Popen(command)
+                QMessageBox.information(
+                    self, "Launching", f"Launching replay with bottles-cli: {replay_path}"
+                )
+            except FileNotFoundError:
+                QMessageBox.critical(
+                    self, "Error", "bottles-cli not found. Make sure it's in your PATH."
+                )
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"An error occurred while launching on Linux: {e}")
+        else:
+            QMessageBox.critical(self, "Error", f"Unsupported operating system: {sys.platform}")
 
     def open_settings(self):
         initial_directory = ""

@@ -3,6 +3,7 @@
 The WoT Replay Manager is a desktop application built with Python and PyQt6 that helps you manage and launch your World of Tanks replays. It provides a user-friendly interface to sort, view, and launch replay files, as well as clean up old replays that are no longer compatible with the current game version.
 ***Mainly made for Linux users.***
 
+- **Cross-Platform Compatibility**: Supports both Windows and Linux operating systems.
 - **Replay Listing**: Automatically detects and lists .wotreplay files from your specified directory.
 - **Detailed Information**: Displays key replay metadata, including player name, tank, map, date, damage dealt, and game version.
 - **Sorting**: Sort your replay list by date, player name, tank, map, or damage.
@@ -17,13 +18,14 @@ To run this application, you will need:
 - **PyQt6**: `pip install PyQt6`
 - **wotreplay**: `pip install wotreplay`
 - **bottles-cli**: Required for launching replays. This tool is typically used on Linux systems for managing Windows applications.
+    - **Note**: This application is not designed to work with Flatpak Bottles.
     - **Bottles**: https://github.com/bottlesapp/bottles
 
 ## How to Use
 1. **First-Time Setup**
 
 Upon first launch, the application will prompt you to configure the necessary settings. You will need to provide the following paths:
-- **Bottles Bottle Name**: The name of the Bottles container where World of Tanks is installed (e.g., `WindowsGames`).
+- **Bottles Bottle Name** (Linux only): The name of the Bottles container where World of Tanks is installed (e.g., `WindowsGames`). This setting will be ignored on Windows.
 - **WoT Executable Path**: The full path to your `WorldOfTanks.exe` file.
 - **Replays Folder Path**: The folder where your `.wotreplay` files are saved.
 - **Client Version XML Path**: The path to the `version.xml` file in your World of Tanks game directory (used for replay cleanup).
