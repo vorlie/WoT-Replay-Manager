@@ -6,3 +6,4 @@ sqlalchemy==2.0.43
 tqdm==4.67.1
 typing-extensions==4.15.0
 wotreplay==1.0.2
+nuitka==2.7.13

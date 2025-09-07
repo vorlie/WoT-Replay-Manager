@@ -1,3 +1,6 @@
 .venv/
 replay-picker.desktop
 __pycache__/
+ignore/
+*.dist
+*.build
