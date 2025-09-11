@@ -42,55 +42,6 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ---
 
-## Release Structure
-
-### Windows Release Structure
-```
-WoT-Replay-Manager/
-├── WoT-Replay-Manager.exe
-├── wot_parser_lib.dll
-├── Qt DLLs (Qt6Core.dll, Qt6Gui.dll, etc.)
-├── Support DLLs (libgcc, libstdc++, etc.)
-├── generic/
-│   └── qtuiotouchplugin.dll
-├── iconengines/
-│   └── qsvgicon.dll
-├── imageformats/
-│   └── qgif.dll, qico.dll, qjpeg.dll, qsvg.dll
-├── networkinformation/
-├── platforms/
-│   └── qwindows.dll
-├── styles/
-├── tls/
-└── translations/
-```
-
-### Linux Release Structure
-```
-WoT-Replay-Manager/
-├── bin/
-│   └── WoT-Replay-Manager
-├── lib/
-│   ├── libwot_parser_lib.so
-│   ├── Qt libraries
-│   └── System libraries
-├── plugins/
-│   └── platforms/
-│       ├── libqwayland-egl.so
-│       ├── libqwayland-generic.so
-│       └── libqxcb.so
-├── icon.png
-├── run.sh
-├── wotrm.desktop
-└── LICENSE
-```
-
-> ⚠️ **Important Notes:**
-> * On Windows, all DLLs including `wot_parser_lib.dll` must be in the root directory with the executable
-> * On Linux, use the provided `run.sh` script which sets up proper library paths
-
----
-
 ## Building the Application
 
 ### Linux
@@ -177,3 +128,114 @@ copy target\release\wot_parser_lib.dll ..\WoT-Replay-Manager\
 * The C++/Qt app only handles UI, settings, and launching the game.
 * Keep the Rust library alongside the executable to avoid runtime errors.
 * The application supports `.wotreplay` files only.
+
+---
+
+## Release Structure
+
+### Windows Release Structure
+```
+WoT-Replay-Manager/
+├── WoT-Replay-Manager.exe
+├── wot_parser_lib.dll
+├── Qt DLLs (Qt6Core.dll, Qt6Gui.dll, etc.)
+├── Support DLLs (libgcc, libstdc++, etc.)
+├── generic/
+│   └── qtuiotouchplugin.dll
+├── iconengines/
+│   └── qsvgicon.dll
+├── imageformats/
+│   └── qgif.dll, qico.dll, qjpeg.dll, qsvg.dll
+├── networkinformation/
+├── platforms/
+│   └── qwindows.dll
+├── styles/
+├── tls/
+└── translations/
+```
+
+### Linux Release Structure
+```
+WoT-Replay-Manager/
+├── bin
+│   └── WoT-Replay-Manager*
+├── icon.png
+├── lib
+│   ├── libb2.so.1*
+│   ├── libbrotlicommon.so.1*
+│   ├── libbrotlidec.so.1*
+│   ├── libbz2.so.1.0*
+│   ├── libc.so.6*
+│   ├── libcap.so.2*
+│   ├── libdbus-1.so.3*
+│   ├── libdouble-conversion.so.3*
+│   ├── libEGL.so.1*
+│   ├── libexpat.so.1*
+│   ├── libffi.so.8*
+│   ├── libfontconfig.so.1*
+│   ├── libfreetype.so.6*
+│   ├── libgcc_s.so.1
+│   ├── libGLdispatch.so.0*
+│   ├── libglib-2.0.so.0*
+│   ├── libGLX.so.0*
+│   ├── libgomp.so.1*
+│   ├── libgraphite2.so.3*
+│   ├── libharfbuzz.so.0*
+│   ├── libICE.so.6*
+│   ├── libicudata.so.76*
+│   ├── libicui18n.so.76*
+│   ├── libicuuc.so.76*
+│   ├── libm.so.6*
+│   ├── libmd4c.so.0*
+│   ├── libOpenGL.so.0*
+│   ├── libpcre2-16.so.0*
+│   ├── libpcre2-8.so.0*
+│   ├── libpng16.so.16*
+│   ├── libQt6Core.so.6*
+│   ├── libQt6DBus.so.6*
+│   ├── libQt6Gui.so.6*
+│   ├── libQt6WaylandClient.so.6*
+│   ├── libQt6Widgets.so.6*
+│   ├── libQt6XcbQpa.so.6*
+│   ├── libSM.so.6*
+│   ├── libstdc++.so.6*
+│   ├── libsystemd.so.0*
+│   ├── libuuid.so.1*
+│   ├── libwayland-client.so.0*
+│   ├── libwayland-cursor.so.0*
+│   ├── libwot_parser_lib.so*
+│   ├── libX11.so.6*
+│   ├── libX11-xcb.so.1*
+│   ├── libXau.so.6*
+│   ├── libxcb.so.1*
+│   ├── libxcb-cursor.so.0*
+│   ├── libxcb-icccm.so.4*
+│   ├── libxcb-image.so.0*
+│   ├── libxcb-keysyms.so.1*
+│   ├── libxcb-randr.so.0*
+│   ├── libxcb-render.so.0*
+│   ├── libxcb-render-util.so.0*
+│   ├── libxcb-shape.so.0*
+│   ├── libxcb-shm.so.0*
+│   ├── libxcb-sync.so.1*
+│   ├── libxcb-util.so.1*
+│   ├── libxcb-xfixes.so.0*
+│   ├── libxcb-xinput.so.0*
+│   ├── libxcb-xkb.so.1*
+│   ├── libXdmcp.so.6*
+│   ├── libxkbcommon.so.0*
+│   ├── libxkbcommon-x11.so.0*
+│   ├── libz.so.1*
+│   └── libzstd.so.1*
+├── LICENSE
+├── plugins
+│   └── platforms
+│       ├── libqwayland-egl.so*
+│       ├── libqwayland-generic.so*
+│       └── libqxcb.so*
+└── run.sh*
+```
+
+> ⚠️ **Important Notes:**
+> * On Windows, all DLLs including `wot_parser_lib.dll` must be in the root directory with the executable
+> * On Linux, use the provided `run.sh` script which sets up proper library paths
