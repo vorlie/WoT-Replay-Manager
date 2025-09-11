@@ -15,6 +15,7 @@
 #include <QFile>
 #include <QTextStream>
 #include <QTableWidgetItem>
+#include <QLabel>
 
 extern "C" {
 const char* parse_replay(const char* path_to_replay_file);
@@ -59,6 +60,13 @@ MainWIndow::MainWIndow(QWidget *parent)
     ui->replayTableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
     ui->replayTableWidget->setSortingEnabled(true);
     ui->replayTableWidget->horizontalHeader()->setSectionsClickable(true);
+
+    QLabel* reportLabel = new QLabel(
+        "<a href='https://github.com/vorlie/WoT-Replay-Manager/issues'>Report missing/incorrect tanks</a>", this);
+    reportLabel->setTextFormat(Qt::RichText);
+    reportLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    reportLabel->setOpenExternalLinks(true);
+    statusBar()->addWidget(reportLabel);
 
     loadTankMapping(); // load tank JSON mapping
 
@@ -218,13 +226,31 @@ void MainWIndow::loadReplays()
         ReplayInfo info;
         info.path = obj.value("path").toString();
         info.playerName = obj.value("playerName").toString();
+        qDebug().noquote() << "[DEBUG] Original tank string:" << obj.value("tank").toString();
+        qDebug().noquote() << "[DEBUG] Split tank ID:" << obj.value("tank").toString().split('-').last();
 
-        QString fullTankId = obj.value("tank").toString().split('-').last();
-        if (tankMap.contains(fullTankId))
-            info.tank = tankMap[fullTankId];
+        QString fullTankStr = obj.value("tank").toString();  // "ussr-R47_ISU-152"
+        QString tankId = fullTankStr.section('-', 1, -1);   // "R47_ISU-152"
+        // Split off nation part
+        QStringList parts = fullTankStr.split('-', Qt::SkipEmptyParts);
+        QString suffixLabel;
+
+        // Check if there's a special event suffix
+        if (fullTankStr.endsWith("_FEP23")) {
+            suffixLabel = " (Overwhelming Fire)";
+            // Remove the suffix before looking up the map
+            tankId = fullTankStr.left(fullTankStr.length() - 6).section('-', 1, -1);
+        } else {
+            tankId = fullTankStr.section('-', 1, -1);
+        }
+
+        // Lookup in the tank map
+        if (tankMap.contains(tankId))
+            info.tank = tankMap[tankId] + suffixLabel;
         else
-            info.tank = fullTankId;
+            info.tank = fullTankStr + suffixLabel;
 
+        qDebug().noquote() << "[DEBUG] Resolved tank name:" << info.tank;
         info.map = obj.value("map").toString();
         info.date = obj.value("date").toString();
         info.damage = obj.value("damage").toInt();

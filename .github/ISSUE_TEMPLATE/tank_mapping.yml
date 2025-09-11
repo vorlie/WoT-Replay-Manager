@@ -1,0 +1,45 @@
+name: 🏷 Tank Mapping Issue
+description: Report missing, incorrect, or misidentified tanks in WoT Replay Manager.
+title: "[Tank Mapping] "
+labels: ["tank-mapping", "bug"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Please use this template to report issues with tank mappings.**
+
+  - type: input
+    id: tank_id
+    attributes:
+      label: Tank ID
+      description: "The raw tank string from the replay (e.g., 'ussr-R47_ISU-152')."
+      placeholder: "Enter the tank ID as shown in the replay"
+    validations:
+      required: true
+
+  - type: input
+    id: expected_name
+    attributes:
+      label: Expected Tank Name
+      description: "What the correct tank name should be (e.g., 'ISU-152')."
+      placeholder: "Enter the correct tank name"
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional Notes
+      description: "Any extra context (game mode, special edition, etc.)."
+
+  - type: checkboxes
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: "Check all that apply to describe the issue."
+      options:
+        - label: Appears incorrectly in the replay table
+        - label: Missing from tank mapping JSON
+        - label: Other (describe in Additional Notes)
