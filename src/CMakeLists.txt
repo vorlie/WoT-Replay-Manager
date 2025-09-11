@@ -40,7 +40,18 @@ qt_add_executable(WoT-Replay-Manager
 
 qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 
-target_link_libraries(WoT-Replay-Manager PRIVATE Qt6::Widgets)
+set(RUST_TARGET_DIR "${CMAKE_SOURCE_DIR}/wot_parser_lib/target/release")
+
+if(WIN32)
+    set(RUST_LIB_PATH "${RUST_TARGET_DIR}/wot_parser_lib.dll.lib")
+elseif(UNIX)
+    set(RUST_LIB_PATH "${RUST_TARGET_DIR}/libwot_parser_lib.so")
+endif()
+
+target_link_libraries(WoT-Replay-Manager PRIVATE
+    Qt6::Widgets
+    ${RUST_LIB_PATH}
+)
 
 # Ensure the compiler sees generated ui_*.h files in the build dir
 target_include_directories(WoT-Replay-Manager PRIVATE ${CMAKE_CURRENT_BINARY_DIR})

@@ -16,6 +16,11 @@
 #include <QTextStream>
 #include <QTableWidgetItem>
 
+extern "C" {
+const char* parse_replay(const char* path_to_replay_file);
+void free_string(char* s);
+}
+
 struct ReplayInfo {
     QString path;
     QString playerName;
@@ -37,7 +42,7 @@ MainWIndow::MainWIndow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    this->setWindowTitle("WoT Replay Manager");
+    this->setWindowTitle("WoT Replay Manager (uses rust parser)");
     this->setWindowIcon(QIcon(":/resources/icon.png"));
 
     QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
@@ -150,6 +155,11 @@ void MainWIndow::loadReplays()
     ui->replayTableWidget->setColumnCount(7);
     replaysData.clear();
 
+    // Set the horizontal headers (table names)
+    QStringList labels;
+    labels << "Player" << "Tank" << "Map" << "Date" << "Damage" << "Server" << "Version";
+    ui->replayTableWidget->setHorizontalHeaderLabels(labels);
+
     if (replays_directory.isEmpty()) return;
 
     // Enable sorting
@@ -158,51 +168,58 @@ void MainWIndow::loadReplays()
     // Load tank mappings from resource
     loadTankMapping();
 
-    // Run Python CLI to get replay data
-    QString appDir = QCoreApplication::applicationDirPath();
-    QString pyCli;
-#ifdef Q_OS_WIN
-    pyCli = appDir + "/parser/replay_parser.exe";
-#else
-    pyCli = appDir + "/parser/replay_parser.bin";
-#endif
-    QStringList args;
-    args << replays_directory;
+    // Loop through all .wotreplay files in the directory
+    QDir dir(replays_directory);
+    QStringList filters;
+    filters << "*.wotreplay";
+    QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files | QDir::NoDotAndDotDot);
 
-    QProcess process;
-    process.start(pyCli, args);
-    if (!process.waitForFinished(5000)) {
-        QMessageBox::critical(this, "Error", "Python CLI timed out or failed to run.");
-        return;
-    }
+    ui->replayTableWidget->setRowCount(fileList.size());
 
-    QByteArray output = process.readAllStandardOutput();
-    QJsonParseError parseError;
-    QJsonDocument doc = QJsonDocument::fromJson(output, &parseError);
-    if (parseError.error != QJsonParseError::NoError) {
-        QMessageBox::critical(this, "Error", "Failed to parse JSON from CLI: " + parseError.errorString());
-        return;
-    }
+    for (int row = 0; row < fileList.size(); ++row) {
+        QFileInfo fileInfo = fileList.at(row);
+        QString filePath = fileInfo.absoluteFilePath();
 
-    if (!doc.isArray()) {
-        QMessageBox::critical(this, "Error", "Unexpected JSON structure from CLI");
-        return;
-    }
+        // Convert QString to C-style string for FFI
+        QByteArray filePathBytes = filePath.toUtf8();
+        const char* path_c_str = filePathBytes.constData();
 
-    QJsonArray array = doc.array();
-    ui->replayTableWidget->setRowCount(array.size());
+        // Call the Rust function
+        const char* result_c_str = parse_replay(path_c_str);
 
-    for (int row = 0; row < array.size(); ++row) {
-        QJsonValue val = array.at(row);
-        if (!val.isObject()) continue;
+        if (result_c_str == nullptr) {
+            QMessageBox::critical(this, "Error", "Rust parser returned a null pointer.");
+            continue;
+        }
 
-        QJsonObject obj = val.toObject();
+        // Convert the result back to QString
+        QString result_json_str = QString::fromUtf8(result_c_str);
+
+        // Check for an error message from Rust
+        if (result_json_str.startsWith("Failed to parse replay:") || result_json_str.startsWith("Failed to serialize to JSON:")) {
+            //qDebug() << "Rust Error for" << filePath << ":" << result_json_str;
+            free_string(const_cast<char*>(result_c_str));
+            continue;
+        }
+
+        // Parse the JSON
+        QJsonParseError parseError;
+        QJsonDocument doc = QJsonDocument::fromJson(result_json_str.toUtf8(), &parseError);
+
+        // Release the memory from the Rust side
+        free_string(const_cast<char*>(result_c_str));
+
+        if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+            //qDebug() << "Failed to parse JSON from Rust: " << parseError.errorString() << "for file:" << filePath;
+            continue;
+        }
+
+        QJsonObject obj = doc.object();
         ReplayInfo info;
         info.path = obj.value("path").toString();
-        info.playerName = obj.value("player_name").toString();
+        info.playerName = obj.value("playerName").toString();
 
-        // Extract full tank ID from player_vehicle
-        QString fullTankId = obj.value("player_vehicle").toString().split('-').last();
+        QString fullTankId = obj.value("tank").toString().split('-').last();
         if (tankMap.contains(fullTankId))
             info.tank = tankMap[fullTankId];
         else
@@ -210,8 +227,8 @@ void MainWIndow::loadReplays()
 
         info.map = obj.value("map").toString();
         info.date = obj.value("date").toString();
-        info.damage = obj.value("damage_dealt").toInt();
-        info.server = obj.value("server_name").toString();
+        info.damage = obj.value("damage").toInt();
+        info.server = obj.value("server").toString();
         info.version = obj.value("version").toString();
 
         replaysData.append(info);
@@ -252,4 +269,3 @@ void MainWIndow::loadReplays()
 
     ui->replayTableWidget->resizeColumnsToContents();
 }
-

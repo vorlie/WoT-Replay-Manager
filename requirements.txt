@@ -1,9 +1,0 @@
-greenlet==3.2.4
-pyqt6==6.9.1
-pyqt6-qt6==6.9.2
-pyqt6-sip==13.10.2
-sqlalchemy==2.0.43
-tqdm==4.67.1
-typing-extensions==4.15.0
-wotreplay==1.0.2
-nuitka==2.7.13
