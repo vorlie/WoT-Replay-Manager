@@ -1,26 +1,53 @@
 # WoT Replay Manager
 
-WoT Replay Manager is a modern desktop application built with **C++/Qt6** and a **Rust replay parser** for managing World of Tanks replay files. It provides an intuitive interface for organizing and launching your replays.
+WoT Replay Manager is a multi-platform companion for organising and viewing your replays alongside your World of Tanks install. Built with C++, Rust and QT6, manage your replays with ease using an intuitive, snappy interface!
+
 
 ## Features
 
-* **Cross-Platform**: Native support for both Windows and Linux
+* **Seamless Integration**:
+  * Launch replays directly using your WoT installation
+  * Persistent settings for paths and preferences
 * **Smart Replay Management**: 
   * Lists all `.wotreplay` files from your chosen directory
   * Shows detailed information: player name, tank, map, date, damage dealt
+    * Note: Damage dealt shows 0 for incomplete replays
   * Displays server and client version compatibility
 * **Powerful Organization**:
   * Sort replays by date, player name, tank, map, or damage
   * Filter and search functionality
-* **Seamless Integration**:
-  * Launch replays directly using your WoT installation
-  * Persistent settings for paths and preferences
-
+* **Cross-Platform**: Native support for both Windows and Linux
 ---
 
 ## Disclaimer
 
 **WoT Replay Manager is a fan-made tool and is not affiliated with, endorsed, or approved by Wargaming.net or any other associated entity.**
+
+---
+
+## Installation
+
+### Windows
+1. Download the latest `WoT-Replay-Manager-{version}-Win64.zip` from the [Releases page](https://github.com/vorlie/WoT-Replay-Manager/releases/latest)
+2. Extract the ZIP file to your preferred location
+3. Run `WoT-Replay-Manager.exe`
+
+### Linux
+1. Download the latest `WoT-Replay-Manager-{version}-linux-x86_64.tar.gz` from the [Releases page](https://github.com/vorlie/WoT-Replay-Manager/releases/latest)
+2. Extract the archive:
+```bash
+tar xf WoT-Replay-Manager-*-linux-x86_64.tar.gz
+```
+3. Make the run script executable:
+```bash
+chmod +x WoT-Replay-Manager/run.sh
+```
+4. Run the application:
+```bash
+./WoT-Replay-Manager/run.sh
+```
+
+> **Note**: All required dependencies are bundled with both versions. No additional installation steps needed.
 
 ---
 
