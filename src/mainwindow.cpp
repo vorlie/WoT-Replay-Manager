@@ -43,7 +43,7 @@ MainWIndow::MainWIndow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    this->setWindowTitle("WoT Replay Manager (uses rust parser)");
+    this->setWindowTitle("WoT Replay Manager");
     this->setWindowIcon(QIcon(":/resources/icon.png"));
 
     QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
@@ -73,6 +73,29 @@ MainWIndow::MainWIndow(QWidget *parent)
     if (!wot_executable_path.isEmpty() && !replays_directory.isEmpty() && !client_version_xml_path.isEmpty()) {
         loadReplays();
     }
+
+    ui->replayTableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->replayTableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+
+    // Initially disable Launch button
+    ui->launchButton->setEnabled(false);
+
+    // Connect selection change → enable/disable launch button
+    connect(ui->replayTableWidget, &QTableWidget::itemSelectionChanged, this, [this]() {
+        bool hasSelection = !ui->replayTableWidget->selectedItems().isEmpty();
+        ui->launchButton->setEnabled(hasSelection);
+    });
+
+    this->setStyleSheet(
+        "QTableWidget::item:selected { "
+        "   background-color: #2a72d4; "
+        "   color: white; "
+        "}"
+        "QPushButton:enabled:hover { "
+        "   background-color: #2C4F73; "
+        "   color: white; "
+        "}"
+        );
 }
 
 MainWIndow::~MainWIndow()
