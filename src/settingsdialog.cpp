@@ -14,7 +14,10 @@ SettingsDialog::SettingsDialog(QSettings *settings, QWidget *parent)
     ui->replaysLineEdit->setText(appSettings->value("replays_path").toString());
     ui->versionLineEdit->setText(appSettings->value("client_version_xml_path").toString());
     ui->bottleNameLineEdit->setText(appSettings->value("bottle_name", "WindowsGames").toString());
-
+#ifdef Q_OS_WIN
+    ui->bottleNameLabel->hide();
+    ui->bottleNameLineEdit->hide();
+#endif
     connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &SettingsDialog::on_saveButton_clicked);
     connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &SettingsDialog::reject);
 }

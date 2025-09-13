@@ -45,7 +45,6 @@ MainWIndow::MainWIndow(QWidget *parent)
 
     this->setWindowTitle("WoT Replay Manager");
     this->setWindowIcon(QIcon(":/resources/icon.png"));
-
     QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
     QDir().mkpath(configDir);
 
@@ -62,11 +61,22 @@ MainWIndow::MainWIndow(QWidget *parent)
     ui->replayTableWidget->horizontalHeader()->setSectionsClickable(true);
 
     QLabel* reportLabel = new QLabel(
-        "<a href='https://github.com/vorlie/WoT-Replay-Manager/issues'>Report missing/incorrect tanks</a>", this);
+        "<a href='https://github.com/vorlie/WoT-Replay-Manager/issues/new?template=tank_mapping.yml'>Report Incorrect Tank Name</a>", this);
     reportLabel->setTextFormat(Qt::RichText);
     reportLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
     reportLabel->setOpenExternalLinks(true);
+
+    QLabel* aboutLabel = new QLabel(
+        "<a href='https://github.com/vorlie/WoT-Replay-Manager?tab=readme-ov-file'>Repository</a>", this);
+    aboutLabel->setTextFormat(Qt::RichText);
+    aboutLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    aboutLabel->setOpenExternalLinks(true);
+
+    statusBar()->addWidget(aboutLabel);
     statusBar()->addWidget(reportLabel);
+
+    reportLabel->setContentsMargins(5, 0, 0, 5);
+    aboutLabel->setContentsMargins(10, 0, 0, 5);
 
     loadTankMapping(); // load tank JSON mapping
 
@@ -86,16 +96,15 @@ MainWIndow::MainWIndow(QWidget *parent)
         ui->launchButton->setEnabled(hasSelection);
     });
 
-    this->setStyleSheet(
-        "QTableWidget::item:selected { "
-        "   background-color: #2a72d4; "
-        "   color: white; "
-        "}"
-        "QPushButton:enabled:hover { "
-        "   background-color: #2C4F73; "
-        "   color: white; "
-        "}"
-        );
+    ui->launchButton->setStyleSheet(R"(
+        QPushButton:enabled {
+            background-color: #3A6D99;
+            color: #FFFFFF;
+        }
+        QPushButton:hover:enabled {
+            background-color: #335c85;
+        }
+    )");
 }
 
 MainWIndow::~MainWIndow()
