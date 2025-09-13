@@ -78,8 +78,6 @@ MainWIndow::MainWIndow(QWidget *parent)
     reportLabel->setContentsMargins(5, 0, 0, 5);
     aboutLabel->setContentsMargins(10, 0, 0, 5);
 
-    loadTankMapping(); // load tank JSON mapping
-
     if (!wot_executable_path.isEmpty() && !replays_directory.isEmpty() && !client_version_xml_path.isEmpty()) {
         loadReplays();
     }
