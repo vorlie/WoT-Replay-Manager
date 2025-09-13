@@ -1,0 +1,51 @@
+name: Windows Build (Qt6 MinGW + Rust DLL)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Qt6 MinGW
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: 6.9.2
+          host: windows
+          target: desktop
+          arch: win64_mingw
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Build Rust DLL
+        working-directory: src/wot_parser_lib
+        run: cargo build --release --target x86_64-pc-windows-gnu
+
+      - name: Configure CMake
+        run: cmake -S src -B src/build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build CMake
+        run: cmake --build src/build --config Release
+
+      - name: Deploy Qt DLLs
+        run: |
+          $qtBin = "${env:Qt6_DIR}\\mingw_64\\bin"
+          & "$qtBin\\windeployqt.exe" src\\build\\Desktop_Qt_6_9_2_MinGW_64_bit-Release\\WoT-Replay-Manager.exe
+
+      - name: Archive Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: WoT-Replay-Manager-Windows
+          path: src/build/Desktop_Qt_6_9_2_MinGW_64_bit-Release/**
