@@ -43,7 +43,7 @@ qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 set(RUST_TARGET_DIR "${CMAKE_SOURCE_DIR}/wot_parser_lib/target/release")
 
 if(WIN32)
-    set(RUST_LIB_PATH "${RUST_TARGET_DIR}/wot_parser_lib.dll.a")
+    set(RUST_LIB_PATH "${RUST_TARGET_DIR}/wot_parser_lib.dll")
 elseif(UNIX)
     set(RUST_LIB_PATH "${RUST_TARGET_DIR}/libwot_parser_lib.so")
 endif()
