@@ -30,6 +30,8 @@ qt_add_executable(WoT-Replay-Manager
 
     json.hpp
     resources.qrc
+    replayscanner.h
+    replayscanner.cpp
 
 
 

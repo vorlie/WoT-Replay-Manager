@@ -6,7 +6,6 @@
 #include <QAbstractItemView>
 #include <QPushButton>
 #include <QStandardPaths>
-#include <QSettings>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -16,38 +15,38 @@
 #include <QTextStream>
 #include <QTableWidgetItem>
 #include <QLabel>
-
-extern "C" {
-const char* parse_replay(const char* path_to_replay_file);
-void free_string(char* s);
-}
-
-struct ReplayInfo {
-    QString path;
-    QString playerName;
-    QString tank;
-    QString map;
-    QString date;
-    int damage;
-    QString server;
-    QString version;
-};
-
-QList<ReplayInfo> replaysData;
-QMap<QString, QString> tankMap;
+#include <QSet>
 
 MainWIndow::MainWIndow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWIndow)
     , settings(nullptr)
+    , m_fileWatcher(new QFileSystemWatcher(this))
+    , m_workerThread(new QThread(this))
+    , m_scanner(nullptr)
 {
     ui->setupUi(this);
+    setupUiAndConnections();
+}
 
+MainWIndow::~MainWIndow()
+{
+    if (m_workerThread->isRunning()) {
+        m_workerThread->requestInterruption();
+        m_workerThread->quit();
+        m_workerThread->wait();
+    }
+    delete ui;
+    delete settings;
+}
+
+void MainWIndow::setupUiAndConnections()
+{
     this->setWindowTitle("WoT Replay Manager");
     this->setWindowIcon(QIcon(":/resources/icon.png"));
+
     QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
     QDir().mkpath(configDir);
-
     QString configPath = configDir + "/config.ini";
     settings = new QSettings(configPath, QSettings::IniFormat);
 
@@ -59,242 +58,99 @@ MainWIndow::MainWIndow(QWidget *parent)
     ui->replayTableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
     ui->replayTableWidget->setSortingEnabled(true);
     ui->replayTableWidget->horizontalHeader()->setSectionsClickable(true);
+    ui->replayTableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->replayTableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->replayTableWidget->setColumnCount(7);
+    ui->launchButton->setEnabled(false);
 
-    QLabel* reportLabel = new QLabel(
-        "<a href='https://github.com/vorlie/WoT-Replay-Manager/issues/new?template=tank_mapping.yml'>Report Incorrect Tank Name</a>", this);
+    QLabel* reportLabel = new QLabel("<a href='https://github.com/vorlie/WoT-Replay-Manager/issues/new?template=tank_mapping.yml'>Report Incorrect Tank Name</a>", this);
     reportLabel->setTextFormat(Qt::RichText);
     reportLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
     reportLabel->setOpenExternalLinks(true);
-
-    QLabel* aboutLabel = new QLabel(
-        "<a href='https://github.com/vorlie/WoT-Replay-Manager?tab=readme-ov-file'>Repository</a>", this);
+    QLabel* aboutLabel = new QLabel("<a href='https://github.com/vorlie/WoT-Replay-Manager?tab=readme-ov-file'>Repository</a>", this);
     aboutLabel->setTextFormat(Qt::RichText);
     aboutLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
     aboutLabel->setOpenExternalLinks(true);
-
     statusBar()->addWidget(aboutLabel);
     statusBar()->addWidget(reportLabel);
-
     reportLabel->setContentsMargins(5, 0, 0, 5);
     aboutLabel->setContentsMargins(10, 0, 0, 5);
 
-    if (!wot_executable_path.isEmpty() && !replays_directory.isEmpty() && !client_version_xml_path.isEmpty()) {
-        loadReplays();
+    // Connect signals for the main UI
+    connect(ui->replayTableWidget, &QTableWidget::itemSelectionChanged, this, &MainWIndow::on_replayTableWidget_itemSelectionChanged);
+    connect(ui->settingsButton, &QPushButton::clicked, this, &MainWIndow::on_settingsButton_clicked);
+    connect(ui->cleanupButton, &QPushButton::clicked, this, &MainWIndow::on_cleanupButton_clicked);
+    connect(ui->launchButton, &QPushButton::clicked, this, &MainWIndow::on_launchButton_clicked);
+
+    // Connect the file system watcher
+    connect(m_fileWatcher, &QFileSystemWatcher::directoryChanged, this, &MainWIndow::onReplayDirectoryChanged);
+
+    // Initial scan on startup
+    if (!replays_directory.isEmpty()) {
+        m_fileWatcher->addPath(replays_directory);
+        startReplayScan();
     }
-
-    ui->replayTableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
-    ui->replayTableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
-
-    // Initially disable Launch button
-    ui->launchButton->setEnabled(false);
-
-    // Connect selection change → enable/disable launch button
-    connect(ui->replayTableWidget, &QTableWidget::itemSelectionChanged, this, [this]() {
-        bool hasSelection = !ui->replayTableWidget->selectedItems().isEmpty();
-        ui->launchButton->setEnabled(hasSelection);
-    });
-
-    ui->launchButton->setStyleSheet(R"(
-        QPushButton:enabled {
-            background-color: #3A6D99;
-            color: #FFFFFF;
-        }
-        QPushButton:hover:enabled {
-            background-color: #335c85;
-        }
-    )");
 }
 
-MainWIndow::~MainWIndow()
+void MainWIndow::startReplayScan(bool incremental)
 {
-    delete ui;
-    delete settings;
-}
-
-void MainWIndow::loadTankMapping()
-{
-    QFile file(":/resources/tank_mapping.json"); // QRC resource file
-    if (!file.open(QIODevice::ReadOnly)) {
-        qDebug() << "Failed to open tank mapping JSON";
+    if (m_workerThread->isRunning()) {
+        qDebug() << "Scan already in progress.";
         return;
     }
 
-    QByteArray data = file.readAll();
-    QJsonParseError parseError;
-    QJsonDocument doc = QJsonDocument::fromJson(data, &parseError);
-    if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
-        qDebug() << "Failed to parse tank mapping JSON:" << parseError.errorString();
-        return;
+    if (m_scanner) {
+        m_scanner->deleteLater();
+        m_scanner = nullptr;
     }
 
-    QJsonObject obj = doc.object();
-    for (auto it = obj.begin(); it != obj.end(); ++it) {
-        tankMap[it.key()] = it.value().toString();
-    }
+    m_scanner = new ReplayScanner(replays_directory);
+    m_scanner->moveToThread(m_workerThread);
 
-    qDebug() << "Loaded tank mappings:" << tankMap.size();
+    connect(m_workerThread, &QThread::started, m_scanner, &ReplayScanner::doScan);
+    connect(m_scanner, &ReplayScanner::scanFinished, this, &MainWIndow::onReplayScanFinished);
+    connect(m_scanner, &ReplayScanner::scanProgress, this, &MainWIndow::onReplayScanProgress);
+    connect(m_scanner, &ReplayScanner::scanFinished, m_workerThread, &QThread::quit);
+    connect(m_workerThread, &QThread::finished, m_scanner, &QObject::deleteLater);
+
+    m_workerThread->start();
 }
 
-void MainWIndow::on_settingsButton_clicked()
+void MainWIndow::onReplayScanFinished(const QList<ReplayInfo>& replays)
 {
-    SettingsDialog dlg(settings, this);
-    dlg.exec();
-
-    wot_executable_path = settings->value("executable_path", "").toString();
-    replays_directory = settings->value("replays_path", "").toString();
-    client_version_xml_path = settings->value("client_version_xml_path", "").toString();
-    bottle_name = settings->value("bottle_name", "WindowsGames").toString();
-
-    if (!wot_executable_path.isEmpty() && !replays_directory.isEmpty() && !client_version_xml_path.isEmpty()) {
-        loadReplays();
-    }
+    qDebug() << "Received scan results, total replays:" << replays.size();
+    replaysData = replays;
+    updateTable(replaysData);
+    statusBar()->showMessage("Scan complete! Found " + QString::number(replays.size()) + " replays.", 5000);
 }
 
-void MainWIndow::on_cleanupButton_clicked()
+void MainWIndow::onReplayScanProgress(const QString& currentFile)
 {
-    QMessageBox::information(this, "Cleanup", "Run replay cleanup here.");
+    statusBar()->showMessage("Scanning: " + currentFile);
 }
 
-void MainWIndow::on_launchButton_clicked()
+void MainWIndow::onReplayDirectoryChanged(const QString& path)
 {
-    int row = ui->replayTableWidget->currentRow();
-    if (row < 0) {
-        QMessageBox::information(this, "Info", "No replay selected.");
-        return;
-    }
-
-    QString replayPath = ui->replayTableWidget->item(row, 0)->data(Qt::UserRole).toString();
-
-#ifdef Q_OS_WIN
-    if (wot_executable_path.isEmpty()) {
-        QMessageBox::critical(this, "Error", "WoT executable path not set.");
-        return;
-    }
-    QProcess::startDetached(wot_executable_path, { replayPath });
-
-#elif defined(Q_OS_LINUX)
-    if (wot_executable_path.isEmpty() || bottle_name.isEmpty()) {
-        QMessageBox::critical(this, "Error", "WoT executable path or bottle name not set.");
-        return;
-    }
-
-    QStringList args;
-    args << "run" << "-b" << bottle_name << "-e" << wot_executable_path << "--args" << replayPath;
-    if (!QProcess::startDetached("bottles-cli", args)) {
-        QMessageBox::critical(this, "Error", "Failed to launch replay. Is bottles-cli installed and in PATH?");
-    }
-#endif
+    qDebug() << "Replay directory changed:" << path;
+    startReplayScan();
 }
 
-void MainWIndow::loadReplays()
+void MainWIndow::updateTable(const QList<ReplayInfo>& replays)
 {
     ui->replayTableWidget->clearContents();
-    ui->replayTableWidget->setRowCount(0);
-    ui->replayTableWidget->setColumnCount(7);
-    replaysData.clear();
+    ui->replayTableWidget->setRowCount(replays.size());
 
-    // Set the horizontal headers (table names)
     QStringList labels;
     labels << "Player" << "Tank" << "Map" << "Date" << "Damage" << "Server" << "Version";
     ui->replayTableWidget->setHorizontalHeaderLabels(labels);
 
-    if (replays_directory.isEmpty()) return;
-
-    // Enable sorting
-    ui->replayTableWidget->setSortingEnabled(true);
-
-    // Load tank mappings from resource
-    loadTankMapping();
-
-    // Loop through all .wotreplay files in the directory
-    QDir dir(replays_directory);
-    QStringList filters;
-    filters << "*.wotreplay";
-    QFileInfoList fileList = dir.entryInfoList(filters, QDir::Files | QDir::NoDotAndDotDot);
-
-    ui->replayTableWidget->setRowCount(fileList.size());
-
-    for (int row = 0; row < fileList.size(); ++row) {
-        QFileInfo fileInfo = fileList.at(row);
-        QString filePath = fileInfo.absoluteFilePath();
-
-        // Convert QString to C-style string for FFI
-        QByteArray filePathBytes = filePath.toUtf8();
-        const char* path_c_str = filePathBytes.constData();
-
-        // Call the Rust function
-        const char* result_c_str = parse_replay(path_c_str);
-
-        if (result_c_str == nullptr) {
-            QMessageBox::critical(this, "Error", "Rust parser returned a null pointer.");
-            continue;
-        }
-
-        // Convert the result back to QString
-        QString result_json_str = QString::fromUtf8(result_c_str);
-
-        // Check for an error message from Rust
-        if (result_json_str.startsWith("Failed to parse replay:") || result_json_str.startsWith("Failed to serialize to JSON:")) {
-            //qDebug() << "Rust Error for" << filePath << ":" << result_json_str;
-            free_string(const_cast<char*>(result_c_str));
-            continue;
-        }
-
-        // Parse the JSON
-        QJsonParseError parseError;
-        QJsonDocument doc = QJsonDocument::fromJson(result_json_str.toUtf8(), &parseError);
-
-        // Release the memory from the Rust side
-        free_string(const_cast<char*>(result_c_str));
-
-        if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
-            //qDebug() << "Failed to parse JSON from Rust: " << parseError.errorString() << "for file:" << filePath;
-            continue;
-        }
-
-        QJsonObject obj = doc.object();
-        ReplayInfo info;
-        info.path = obj.value("path").toString();
-        info.playerName = obj.value("playerName").toString();
-        qDebug().noquote() << "[DEBUG] Original tank string:" << obj.value("tank").toString();
-        qDebug().noquote() << "[DEBUG] Split tank ID:" << obj.value("tank").toString().split('-').last();
-
-        QString fullTankStr = obj.value("tank").toString();  // "ussr-R47_ISU-152"
-        QString tankId = fullTankStr.section('-', 1, -1);   // "R47_ISU-152"
-        // Split off nation part
-        QStringList parts = fullTankStr.split('-', Qt::SkipEmptyParts);
-        QString suffixLabel;
-
-        // Check if there's a special event suffix
-        if (fullTankStr.endsWith("_FEP23")) {
-            suffixLabel = " (Overwhelming Fire)";
-            // Remove the suffix before looking up the map
-            tankId = fullTankStr.left(fullTankStr.length() - 6).section('-', 1, -1);
-        } else {
-            tankId = fullTankStr.section('-', 1, -1);
-        }
-
-        // Lookup in the tank map
-        if (tankMap.contains(tankId))
-            info.tank = tankMap[tankId] + suffixLabel;
-        else
-            info.tank = fullTankStr + suffixLabel;
-
-        qDebug().noquote() << "[DEBUG] Resolved tank name:" << info.tank;
-        info.map = obj.value("map").toString();
-        info.date = obj.value("date").toString();
-        info.damage = obj.value("damage").toInt();
-        info.server = obj.value("server").toString();
-        info.version = obj.value("version").toString();
-
-        replaysData.append(info);
-
-        // Populate table items and make read-only
+    for (int row = 0; row < replays.size(); ++row) {
+        const ReplayInfo& info = replays[row];
         QTableWidgetItem* item;
 
         item = new QTableWidgetItem(info.playerName);
         item->setFlags(item->flags() & ~Qt::ItemIsEditable);
-        item->setData(Qt::UserRole, info.path); // store path for launching
+        item->setData(Qt::UserRole, info.path);
         ui->replayTableWidget->setItem(row, 0, item);
 
         item = new QTableWidgetItem(info.tank);
@@ -311,7 +167,7 @@ void MainWIndow::loadReplays()
 
         item = new QTableWidgetItem(QString::number(info.damage));
         item->setFlags(item->flags() & ~Qt::ItemIsEditable);
-        item->setData(Qt::UserRole, info.damage); // numeric sorting
+        item->setData(Qt::UserRole, info.damage);
         ui->replayTableWidget->setItem(row, 4, item);
 
         item = new QTableWidgetItem(info.server);
@@ -322,6 +178,68 @@ void MainWIndow::loadReplays()
         item->setFlags(item->flags() & ~Qt::ItemIsEditable);
         ui->replayTableWidget->setItem(row, 6, item);
     }
-
     ui->replayTableWidget->resizeColumnsToContents();
+}
+
+void MainWIndow::on_replayTableWidget_itemSelectionChanged()
+{
+    bool hasSelection = !ui->replayTableWidget->selectedItems().isEmpty();
+    ui->launchButton->setEnabled(hasSelection);
+}
+
+void MainWIndow::on_settingsButton_clicked()
+{
+    SettingsDialog dlg(settings, this);
+    if (dlg.exec() == QDialog::Accepted) {
+        wot_executable_path = settings->value("executable_path", "").toString();
+        replays_directory = settings->value("replays_path", "").toString();
+        client_version_xml_path = settings->value("client_version_xml_path", "").toString();
+        bottle_name = settings->value("bottle_name", "WindowsGames").toString();
+
+        if (!replays_directory.isEmpty()) {
+            if (!m_fileWatcher->directories().contains(replays_directory)) {
+                m_fileWatcher->addPath(replays_directory);
+            }
+            startReplayScan();
+        }
+    }
+}
+
+void MainWIndow::on_cleanupButton_clicked()
+{
+    QMessageBox::information(this, "Cleanup", "Run replay cleanup here.");
+}
+
+void MainWIndow::on_launchButton_clicked()
+{
+    int row = ui->replayTableWidget->currentRow();
+    if (row < 0) {
+        QMessageBox::information(this, "Info", "No replay selected.");
+        return;
+    }
+
+    QTableWidgetItem* item = ui->replayTableWidget->item(row, 0);
+    if (!item) {
+        return;
+    }
+
+    QString replayPath = item->data(Qt::UserRole).toString();
+
+#ifdef Q_OS_WIN
+    if (wot_executable_path.isEmpty()) {
+        QMessageBox::critical(this, "Error", "WoT executable path not set.");
+        return;
+    }
+    QProcess::startDetached(wot_executable_path, { replayPath });
+#elif defined(Q_OS_LINUX)
+    if (wot_executable_path.isEmpty() || bottle_name.isEmpty()) {
+        QMessageBox::critical(this, "Error", "WoT executable path or bottle name not set.");
+        return;
+    }
+    QStringList args;
+    args << "run" << "-b" << bottle_name << "-e" << wot_executable_path << "--args" << replayPath;
+    if (!QProcess::startDetached("bottles-cli", args)) {
+        QMessageBox::critical(this, "Error", "Failed to launch replay. Is bottles-cli installed and in PATH?");
+    }
+#endif
 }
