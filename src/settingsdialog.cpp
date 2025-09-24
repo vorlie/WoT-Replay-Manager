@@ -18,8 +18,8 @@ SettingsDialog::SettingsDialog(QSettings *settings, QWidget *parent)
     ui->bottleNameLabel->hide();
     ui->bottleNameLineEdit->hide();
 #endif
-    connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &SettingsDialog::on_saveButton_clicked);
-    connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &SettingsDialog::reject);
+
+    //connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &SettingsDialog::on_saveButtonClicked);
 }
 
 SettingsDialog::~SettingsDialog()
@@ -42,13 +42,49 @@ void SettingsDialog::on_versionBrowseButton_clicked() {
     if (!file.isEmpty()) ui->versionLineEdit->setText(file);
 }
 
-void SettingsDialog::on_saveButton_clicked() {
-    appSettings->setValue("bottle_name", ui->bottleNameLineEdit->text());
-    appSettings->setValue("replays_path", ui->replaysLineEdit->text());
-    appSettings->setValue("executable_path", ui->executableLineEdit->text());
-    appSettings->setValue("client_version_xml_path", ui->versionLineEdit->text());
-
-    appSettings->sync();
-
+void SettingsDialog::on_buttonBox_accepted()
+{
+    qDebug() << "ButtonBox accepted signal received";
+    if (!appSettings) {
+        qDebug() << "Settings object is null in accepted slot!";
+        return;
+    }
+    
+    saveSettings();
     accept();
+}
+
+void SettingsDialog::on_buttonBox_rejected()
+{
+    qDebug() << "ButtonBox rejected signal received";
+    reject();
+}
+
+void SettingsDialog::saveSettings()
+{
+    qDebug() << "Saving settings...";
+    if (!appSettings) {
+        qDebug() << "Settings object is null!";
+        return;
+    }
+    
+    // Cache values before saving
+    QString bottleName = ui->bottleNameLineEdit->text().trimmed();
+    QString replaysPath = ui->replaysLineEdit->text().trimmed();
+    QString executablePath = ui->executableLineEdit->text().trimmed();
+    QString versionPath = ui->versionLineEdit->text().trimmed();
+    
+    qDebug() << "Saving paths:"
+             << "\nBottle:" << bottleName
+             << "\nReplays:" << replaysPath
+             << "\nExecutable:" << executablePath
+             << "\nVersion:" << versionPath;
+    
+    appSettings->setValue("bottle_name", bottleName);
+    appSettings->setValue("replays_path", replaysPath);
+    appSettings->setValue("executable_path", executablePath);
+    appSettings->setValue("client_version_xml_path", versionPath);
+    
+    appSettings->sync();
+    qDebug() << "Settings saved and synced";
 }

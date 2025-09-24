@@ -78,9 +78,9 @@ void MainWIndow::setupUiAndConnections()
 
     // Connect signals for the main UI
     connect(ui->replayTableWidget, &QTableWidget::itemSelectionChanged, this, &MainWIndow::on_replayTableWidget_itemSelectionChanged);
-    connect(ui->settingsButton, &QPushButton::clicked, this, &MainWIndow::on_settingsButton_clicked);
-    connect(ui->cleanupButton, &QPushButton::clicked, this, &MainWIndow::on_cleanupButton_clicked);
-    connect(ui->launchButton, &QPushButton::clicked, this, &MainWIndow::on_launchButton_clicked);
+    //connect(ui->settingsButton, &QPushButton::clicked, this, &MainWIndow::on_settingsButton_clicked);
+    //connect(ui->cleanupButton, &QPushButton::clicked, this, &MainWIndow::on_cleanupButton_clicked);
+    //connect(ui->launchButton, &QPushButton::clicked, this, &MainWIndow::on_launchButton_clicked);
 
     // Connect the file system watcher
     connect(m_fileWatcher, &QFileSystemWatcher::directoryChanged, this, &MainWIndow::onReplayDirectoryChanged);
@@ -99,20 +99,45 @@ void MainWIndow::startReplayScan(bool incremental)
         return;
     }
 
+    // Wait for any previous scan to complete
+    m_workerThread->quit();
+    m_workerThread->wait();
+
+    // Clean up previous scanner
     if (m_scanner) {
+        m_scanner->disconnect(); // Disconnect all signals from scanner
         m_scanner->deleteLater();
         m_scanner = nullptr;
     }
 
+    // Create new scanner with error checking
+    if (replays_directory.isEmpty()) {
+        qDebug() << "Replays directory is empty!";
+        return;
+    }
+
     m_scanner = new ReplayScanner(replays_directory);
+    if (!m_scanner) {
+        qDebug() << "Failed to create scanner!";
+        return;
+    }
+
+    // Move to thread before connecting signals
     m_scanner->moveToThread(m_workerThread);
 
-    connect(m_workerThread, &QThread::started, m_scanner, &ReplayScanner::doScan);
-    connect(m_scanner, &ReplayScanner::scanFinished, this, &MainWIndow::onReplayScanFinished);
-    connect(m_scanner, &ReplayScanner::scanProgress, this, &MainWIndow::onReplayScanProgress);
-    connect(m_scanner, &ReplayScanner::scanFinished, m_workerThread, &QThread::quit);
-    connect(m_workerThread, &QThread::finished, m_scanner, &QObject::deleteLater);
+    // Connect signals in specific order
+    connect(m_workerThread, &QThread::started, m_scanner, &ReplayScanner::doScan, Qt::QueuedConnection);
+    connect(m_scanner, &ReplayScanner::scanFinished, this, &MainWIndow::onReplayScanFinished, Qt::QueuedConnection);
+    connect(m_scanner, &ReplayScanner::scanProgress, this, &MainWIndow::onReplayScanProgress, Qt::QueuedConnection);
+    connect(m_scanner, &ReplayScanner::scanFinished, m_workerThread, &QThread::quit, Qt::QueuedConnection);
+    connect(m_workerThread, &QThread::finished, this, [this]() {
+        if (m_scanner) {
+            m_scanner->deleteLater();
+            m_scanner = nullptr;
+        }
+    }, Qt::QueuedConnection);
 
+    // Start thread
     m_workerThread->start();
 }
 
@@ -189,18 +214,34 @@ void MainWIndow::on_replayTableWidget_itemSelectionChanged()
 
 void MainWIndow::on_settingsButton_clicked()
 {
+    if (!settings) {
+        qDebug() << "Settings object is null!";
+        return;
+    }
+
     SettingsDialog dlg(settings, this);
     if (dlg.exec() == QDialog::Accepted) {
-        wot_executable_path = settings->value("executable_path", "").toString();
-        replays_directory = settings->value("replays_path", "").toString();
-        client_version_xml_path = settings->value("client_version_xml_path", "").toString();
-        bottle_name = settings->value("bottle_name", "WindowsGames").toString();
+        QString oldReplaysDirectory = replays_directory;
 
-        if (!replays_directory.isEmpty()) {
-            if (!m_fileWatcher->directories().contains(replays_directory)) {
-                m_fileWatcher->addPath(replays_directory);
+        // Force settings to sync before reading
+        settings->sync();
+
+        // Read settings with fallbacks
+        wot_executable_path = settings->value("executable_path", wot_executable_path).toString();
+        replays_directory = settings->value("replays_path", replays_directory).toString();
+        client_version_xml_path = settings->value("client_version_xml_path", client_version_xml_path).toString();
+        bottle_name = settings->value("bottle_name", bottle_name).toString();
+
+        // Only update file watcher if replays directory changed
+        if (!replays_directory.isEmpty() && oldReplaysDirectory != replays_directory) {
+            if (!oldReplaysDirectory.isEmpty() && 
+                m_fileWatcher->directories().contains(oldReplaysDirectory)) {
+                m_fileWatcher->removePath(oldReplaysDirectory);
             }
-            startReplayScan();
+            
+            if (!m_fileWatcher->addPath(replays_directory)) {
+                qDebug() << "Failed to add new path to file watcher:" << replays_directory;
+            }
         }
     }
 }
