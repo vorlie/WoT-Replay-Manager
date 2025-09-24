@@ -2,6 +2,7 @@
 
 WoT Replay Manager is a multi-platform companion for organising and viewing your replays alongside your World of Tanks install. Built with C++, Rust and QT6, manage your replays with ease using an intuitive, snappy interface!
 
+
 ## Features
 
 * **Seamless Integration**:
