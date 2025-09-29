@@ -49,6 +49,12 @@ chmod +x WoT-Replay-Manager/run.sh
 
 > **Note**: All required dependencies are bundled with both versions. No additional installation steps needed.
 
+### ⚠️ Linux Deployment Caveat
+
+The bundled Linux executable was compiled on **Arch Linux** against a specific version of **Qt 6.x**. While the necessary Qt libraries are included in the package, system dependencies (like specific C/C++ runtime versions) can sometimes conflict.
+- If you are running a modern distribution with Qt 6.x already installed (e.g., a recent KDE Plasma environment), the binary should work seamlessly.
+- If you encounter errors related to missing or incompatible .so files, please follow the Building From Source instructions below.
+
 ---
 
 ## Prerequisites
@@ -221,6 +227,7 @@ WoT-Replay-Manager/
 │   ├── libQt6Core.so.6*
 │   ├── libQt6DBus.so.6*
 │   ├── libQt6Gui.so.6*
+│   ├── libQt6Sql.so.6*
 │   ├── libQt6WaylandClient.so.6*
 │   ├── libQt6Widgets.so.6*
 │   ├── libQt6XcbQpa.so.6*
@@ -256,10 +263,12 @@ WoT-Replay-Manager/
 │   └── libzstd.so.1*
 ├── LICENSE
 ├── plugins
-│   └── platforms
-│       ├── libqwayland-egl.so*
-│       ├── libqwayland-generic.so*
-│       └── libqxcb.so*
+│   ├── platforms
+│   │   ├── libqwayland-egl.so*
+│   │   ├── libqwayland-generic.so*
+│   │   └── libqxcb.so*
+│   └── sqldrivers
+│       └── libqsqlite.so*
 └── run.sh*
 ```
 
