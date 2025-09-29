@@ -13,21 +13,18 @@
   <property name="windowTitle">
    <string>WoT Replay Manager</string>
   </property>
-
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="mainVerticalLayout">
-
-    <!-- Replay table fills top area -->
     <item>
      <widget class="QTableWidget" name="replayTableWidget">
       <property name="alternatingRowColors">
        <bool>true</bool>
       </property>
-      <property name="selectionBehavior">
-       <enum>QAbstractItemView::SelectRows</enum>
-      </property>
       <property name="selectionMode">
-       <enum>QAbstractItemView::SingleSelection</enum>
+       <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
+      </property>
+      <property name="selectionBehavior">
+       <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
       </property>
       <property name="sortingEnabled">
        <bool>true</bool>
@@ -37,11 +34,8 @@
       </property>
      </widget>
     </item>
-
-    <!-- Buttons row at the bottom -->
     <item>
      <layout class="QHBoxLayout" name="bottomButtonLayout">
-      <!-- Left-aligned buttons -->
       <item>
        <layout class="QHBoxLayout" name="leftButtonsLayout">
         <item>
@@ -60,44 +54,49 @@
         </item>
        </layout>
       </item>
-
-      <!-- Spacer to push Launch Replay to right -->
       <item>
        <spacer name="buttonSpacer">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
         </property>
        </spacer>
       </item>
-
-      <!-- Right-aligned Launch button -->
       <item>
        <widget class="QPushButton" name="launchButton">
-        <property name="text">
-         <string>Launch Replay</string>
-        </property>
         <property name="enabled">
          <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Launch Replay</string>
         </property>
        </widget>
       </item>
      </layout>
     </item>
-
    </layout>
   </widget>
-
-  <!-- Menu and Status Bar -->
-  <widget class="QMenuBar" name="menubar"/>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>820</width>
+     <height>23</height>
+    </rect>
+   </property>
+  </widget>
   <widget class="QStatusBar" name="statusbar"/>
-
-  <!-- Actions -->
   <action name="actionSettings">
    <property name="text">
     <string>Settings</string>
    </property>
   </action>
-
  </widget>
  <resources/>
  <connections/>

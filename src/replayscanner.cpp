@@ -35,6 +35,12 @@ void ReplayScanner::doScan()
         emit scanProgress(fileInfo.fileName());
 
         QString filePath = fileInfo.absoluteFilePath();
+
+        if (m_knownReplayPaths.contains(filePath)) {
+            qDebug() << "Skipping known file:" << fileInfo.fileName();
+            continue;
+        }
+
         QByteArray filePathBytes = filePath.toUtf8();
         const char* path_c_str = filePathBytes.constData();
 

@@ -9,7 +9,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets LinguistTools)
+find_package(Qt6 REQUIRED COMPONENTS Widgets LinguistTools Sql)
 
 set(TS_FILES WoT-Replay-Manager_en_US.ts)
 
@@ -32,12 +32,6 @@ qt_add_executable(WoT-Replay-Manager
     resources.qrc
     replayscanner.h
     replayscanner.cpp
-
-
-
-
-
-
 )
 
 qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
@@ -52,6 +46,7 @@ endif()
 
 target_link_libraries(WoT-Replay-Manager PRIVATE
     Qt6::Widgets
+    Qt::Sql
     ${RUST_LIB_PATH}
 )
 

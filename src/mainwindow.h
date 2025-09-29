@@ -7,9 +7,20 @@
 #include <QFileSystemWatcher>
 #include <QThread>
 #include <QHash>
+#include <QtSql/QSqlDatabase>
+#include <QtSql/QSqlQuery>
+#include <QSet>
 #include "replayscanner.h"
 
 namespace Ui { class MainWIndow; }
+
+class DamageTableWidgetItem : public QTableWidgetItem {
+public:
+    bool operator <(const QTableWidgetItem &other) const override
+    {
+        return text().toInt() < other.text().toInt();
+    }
+};
 
 class MainWIndow : public QMainWindow
 {
@@ -41,8 +52,14 @@ private:
     ReplayScanner* m_scanner;
 
     // Private methods for scan and table management
-    void startReplayScan(bool incremental = false);
+    void startReplayScan(bool incremental = false, const QSet<QString>& knownPaths = {});
     void updateTable(const QList<ReplayInfo>& replays);
+
+    // Private methods for database management
+    bool initializeDatabase();
+    QSet<QString> loadReplayCache();
+    void saveReplayCache(const QList<ReplayInfo>& replays);
+    void deleteStaleReplayCacheEntries(const QSet<QString>& pathsToDelete);
 
     // Configuration and data members
     QSettings *settings;
@@ -51,6 +68,7 @@ private:
     QString bottle_name;
     QString client_version_xml_path;
     QList<ReplayInfo> replaysData;
+    QString m_cacheFilePath;
 };
 
 #endif // MAINWINDOW_H
