@@ -18,7 +18,8 @@ class DamageTableWidgetItem : public QTableWidgetItem {
 public:
     bool operator <(const QTableWidgetItem &other) const override
     {
-        return text().toInt() < other.text().toInt();
+        // Compare the raw integer data stored in Qt::UserRole for accurate numerical sorting.
+        return data(Qt::UserRole).toInt() < other.data(Qt::UserRole).toInt();
     }
 };
 

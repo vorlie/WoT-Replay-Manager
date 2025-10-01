@@ -16,6 +16,7 @@
 #include <QtSql/QSqlDatabase>
 #include <QtSql/QSqlQuery>
 #include <QVariant>
+#include <QLocale>
 
 
 MainWIndow::MainWIndow(QWidget *parent)
@@ -389,6 +390,8 @@ void MainWIndow::updateTable(const QList<ReplayInfo>& replays)
     labels << "Player" << "Tank" << "Map" << "Date" << "Damage" << "Server" << "Version";
     ui->replayTableWidget->setHorizontalHeaderLabels(labels);
 
+    QLocale locale = QLocale::system();
+
     for (int row = 0; row < replays.size(); ++row) {
         const ReplayInfo& info = replays[row];
         QTableWidgetItem* item;
@@ -415,11 +418,13 @@ void MainWIndow::updateTable(const QList<ReplayInfo>& replays)
         item->setFlags(item->flags() & ~Qt::ItemIsEditable);
         ui->replayTableWidget->setItem(row, 3, item);
 
-        // Column 4: Damage
+        // Column 4: Damage - Using DamageTableWidgetItem for custom numerical sorting
+        QString formattedDamage = locale.toString(info.damage);
+
         item = new DamageTableWidgetItem();
-        item->setText(QString::number(info.damage));
+        item->setText(formattedDamage); // Use the locale-formatted string for display
         item->setFlags(item->flags() & ~Qt::ItemIsEditable);
-        item->setData(Qt::UserRole, info.damage);
+        item->setData(Qt::UserRole, info.damage); // Store the raw integer for the custom sort operator
         ui->replayTableWidget->setItem(row, 4, item);
 
         // Column 5: Server
@@ -548,9 +553,11 @@ void MainWIndow::on_launchButton_clicked()
         QMessageBox::critical(this, "Error", "WoT executable path or bottle name not set.");
         return;
     }
-    QStringList args;
-    args << "run" << "-b" << bottle_name << "-e" << wot_executable_path << "--args" << replayPath;
-    if (!QProcess::startDetached("bottles-cli", args)) {
+    QStringList bottlesArgs;
+    bottlesArgs << "run" << "-b" << bottle_name << "-e" << wot_executable_path << "--args" << replayPath;
+    QProcess *bottlesProcess = new QProcess(this);
+    QString command = "env -u LD_LIBRARY_PATH bottles-cli " + bottlesArgs.join(" ");
+    if (!QProcess::startDetached("/bin/sh", QStringList() << "-c" << command)) {
         QMessageBox::critical(this, "Error", "Failed to launch replay. Is bottles-cli installed and in PATH?");
     }
 #endif

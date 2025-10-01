@@ -69,17 +69,22 @@ void ReplayScanner::doScan()
         info.playerName = obj.value("playerName").toString();
 
         QString fullTankStr = obj.value("tank").toString();
+        //qDebug() << "Full Tank String" << fullTankStr;
         QString suffixLabel;
+
         if (fullTankStr.endsWith("_FEP23")) {
             suffixLabel = " (Overwhelming Fire)";
             fullTankStr = fullTankStr.left(fullTankStr.length() - 6);
         }
-
+        //qDebug() << "Suffix Tank Label" << suffixLabel;
         QString tankId = fullTankStr.section('-', 1, -1);
+        //qDebug() << "Tank ID" << tankId;
         if (tankMap.contains(tankId)) {
             info.tank = tankMap[tankId] + suffixLabel;
+            //qDebug() << "Tank INFO Mapped" << info.tank;
         } else {
             info.tank = fullTankStr + suffixLabel;
+            //qDebug() << "Tank INFO" << info.tank;
         }
 
         info.map = obj.value("map").toString();
