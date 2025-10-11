@@ -36,25 +36,16 @@ pub unsafe extern "C" fn parse_replay(path_to_replay_file: *const c_char) -> *co
     //println!("Rust Parser: Damage from start JSON: {}", damage);
 
     if damage == 0 {
-        if let Some(end) = &replay_json_end {
-            if let Some(player_performance_block) = end.as_array().and_then(|arr| arr.get(0)) {
-                if let Some(personal) = player_performance_block.get("personal").and_then(|v| v.as_object()) {
-                    if let Some((_veh_id, vehicle)) = personal.iter().next() {
-                        damage = vehicle.get("damageDealt").and_then(|v| v.as_i64()).unwrap_or(0);
-                        //println!("Rust Parser:  Damage from end.personal (first vehicle): {}", damage);
-                    } else {
-                        //println!("Rust Parser: 'personal' block exists but no vehicles found");
-                    }
-                } else {
-                    //println!("Rust Parser: 'personal' block not found in the first element of the end JSON array");
-                }
-
-            } else {
-                //println!("Rust Parser: End JSON is not an array or is empty");
-            }
-        } else {
-            //println!("Rust Parser: No end JSON available");
-        }
+        damage = replay_json_end
+            .as_ref()
+            .and_then(|end| end.as_array())
+            .and_then(|arr| arr.first())
+            .and_then(|block| block.get("personal"))
+            .and_then(|personal| personal.as_object())
+            .and_then(|vehicles| vehicles.values().next())
+            .and_then(|vehicle| vehicle.get("damageDealt"))
+            .and_then(|dmg| dmg.as_i64())
+            .unwrap_or(0);
     }
 
     let flattened = json!({
