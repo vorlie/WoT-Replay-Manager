@@ -31,7 +31,6 @@ ui_*.h
 qrc_*.cpp
 Thumbs.db
 *.res
-*.rc
 /.qmake.cache
 /.qmake.stash
 
@@ -82,6 +81,7 @@ src/CMakeLists.txt.user*
 */build*/
 
 # Rust
-*/wot_parser_lib/target/
-**/*.rs.bk
-*/wot_parser_lib/Cargo.lock
+target/
+old/
+Cargo.lock
+
